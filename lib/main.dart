@@ -392,7 +392,7 @@ class _ChecklistPageState extends State<ChecklistPage> {
                   setState(() => _items[idx].isChecked = val ?? false);
                 },
               );
-            }).toList(),
+            }),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _saveAndEmail,
@@ -532,7 +532,7 @@ class _ReportsPageState extends State<ReportsPage> {
                     await _storage.updateEntry(entry);
                   },
                 );
-              }).toList(),
+              }),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                 child: Row(
@@ -586,6 +586,38 @@ class _ManageQuestionsPageState extends State<ManageQuestionsPage> {
     });
   }
 
+  Future<void> _changePassword() async {
+    final controller = TextEditingController();
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Change App Password'),
+        content: TextField(
+          controller: controller,
+          obscureText: true,
+          decoration: const InputDecoration(hintText: 'Enter new password'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () async {
+              if (controller.text.isNotEmpty) {
+                await _storage.setPassword(controller.text);
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Password updated successfully')),
+                  );
+                }
+              }
+            },
+            child: const Text('Update'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _addQuestion() async {
     final controller = TextEditingController();
     await showDialog(
@@ -605,7 +637,7 @@ class _ManageQuestionsPageState extends State<ManageQuestionsPage> {
                 _questions.add(newQuestion);
                 await _storage.saveQuestions(_questions);
                 setState(() {});
-                if (mounted) Navigator.pop(context);
+                if (context.mounted) Navigator.pop(context);
               }
             },
             child: const Text('Add'),
@@ -630,7 +662,7 @@ class _ManageQuestionsPageState extends State<ManageQuestionsPage> {
                 _questions[index].text = controller.text;
                 await _storage.saveQuestions(_questions);
                 setState(() {});
-                if (mounted) Navigator.pop(context);
+                if (context.mounted) Navigator.pop(context);
               }
             },
             child: const Text('Save'),
@@ -640,7 +672,7 @@ class _ManageQuestionsPageState extends State<ManageQuestionsPage> {
               _questions.removeAt(index);
               await _storage.saveQuestions(_questions);
               setState(() {});
-              if (mounted) Navigator.pop(context);
+              if (context.mounted) Navigator.pop(context);
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
@@ -655,8 +687,13 @@ class _ManageQuestionsPageState extends State<ManageQuestionsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Manage Questions'),
+        title: const Text('Manage'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.password),
+            onPressed: _changePassword,
+            tooltip: 'Change Password',
+          ),
           IconButton(icon: const Icon(Icons.add), onPressed: _addQuestion),
           IconButton(
             icon: const Icon(Icons.exit_to_app),
@@ -688,13 +725,12 @@ class _ManageQuestionsPageState extends State<ManageQuestionsPage> {
         ],
       ),
       body: ReorderableListView(
-        onReorder: (oldIndex, newIndex) async {
+        onReorderItem: (oldIndex, newIndex) {
           setState(() {
-            if (newIndex > oldIndex) newIndex -= 1;
             final item = _questions.removeAt(oldIndex);
             _questions.insert(newIndex, item);
           });
-          await _storage.saveQuestions(_questions);
+          _storage.saveQuestions(_questions);
         },
         children: _questions.asMap().entries.map((entry) {
           int idx = entry.key;
@@ -702,7 +738,10 @@ class _ManageQuestionsPageState extends State<ManageQuestionsPage> {
           return ListTile(
             key: ValueKey(q.id),
             title: Text(q.text),
-            trailing: const Icon(Icons.drag_handle),
+            trailing: ReorderableDragStartListener(
+              index: idx,
+              child: const Icon(Icons.reorder),
+            ),
             onTap: () => _editQuestion(idx),
           );
         }).toList(),
