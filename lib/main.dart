@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io' show exit;
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'models/checklist_item.dart';
@@ -319,7 +321,11 @@ class _ChecklistPageState extends State<ChecklistPage> {
     );
 
     if (confirmed == true) {
-      SystemNavigator.pop();
+      if (kIsWeb) {
+        SystemNavigator.pop();
+      } else {
+        exit(0);
+      }
     }
   }
 
@@ -494,7 +500,11 @@ class _ReportsPageState extends State<ReportsPage> {
                 ),
               );
               if (confirmed == true) {
-                SystemNavigator.pop();
+                if (kIsWeb) {
+                  SystemNavigator.pop();
+                } else {
+                  exit(0);
+                }
               }
             },
             tooltip: 'Exit App',
@@ -666,7 +676,11 @@ class _ManageQuestionsPageState extends State<ManageQuestionsPage> {
                 ),
               );
               if (confirmed == true) {
-                SystemNavigator.pop();
+                if (kIsWeb) {
+                  SystemNavigator.pop();
+                } else {
+                  exit(0);
+                }
               }
             },
             tooltip: 'Exit App',
