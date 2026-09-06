@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/checklist_item.dart';
 import '../models/checklist_entry.dart';
 
@@ -7,6 +8,9 @@ class StorageService {
   static const String _questionsKey = 'checklist_questions';
   static const String _entriesKey = 'checklist_entries';
   static const String _inspectorsKey = 'inspector_names';
+  static const String _passwordKey = 'app_password';
+
+  final _secureStorage = const FlutterSecureStorage();
 
   final List<String> _defaultQuestions = [
     'No hissing coming from any of the 3 bathrooms',
@@ -92,5 +96,19 @@ class StorageService {
       inspectors.add(name.trim());
       await prefs.setStringList(_inspectorsKey, inspectors);
     }
+  }
+
+  Future<bool> isPasswordSet() async {
+    final password = await _secureStorage.read(key: _passwordKey);
+    return password != null && password.isNotEmpty;
+  }
+
+  Future<void> setPassword(String password) async {
+    await _secureStorage.write(key: _passwordKey, value: password);
+  }
+
+  Future<bool> verifyPassword(String password) async {
+    final savedPassword = await _secureStorage.read(key: _passwordKey);
+    return savedPassword == password;
   }
 }

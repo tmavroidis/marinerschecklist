@@ -21,7 +21,167 @@ class MarinersChecklistApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
         useMaterial3: true,
       ),
-      home: const MainContainer(),
+      home: const AuthWrapper(),
+    );
+  }
+}
+
+class AuthWrapper extends StatefulWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  final _storage = StorageService();
+  bool? _isPasswordSet;
+  bool _isAuthenticated = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuth();
+  }
+
+  Future<void> _checkAuth() async {
+    final isSet = await _storage.isPasswordSet();
+    setState(() {
+      _isPasswordSet = isSet;
+    });
+  }
+
+  void _onAuthenticated() {
+    setState(() {
+      _isAuthenticated = true;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isPasswordSet == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (!_isPasswordSet!) {
+      return SetupPasswordScreen(onComplete: () {
+        setState(() {
+          _isPasswordSet = true;
+          _isAuthenticated = true;
+        });
+      });
+    }
+
+    if (!_isAuthenticated) {
+      return LoginScreen(onAuthenticated: _onAuthenticated);
+    }
+
+    return const MainContainer();
+  }
+}
+
+class SetupPasswordScreen extends StatefulWidget {
+  final VoidCallback onComplete;
+  const SetupPasswordScreen({super.key, required this.onComplete});
+
+  @override
+  State<SetupPasswordScreen> createState() => _SetupPasswordScreenState();
+}
+
+class _SetupPasswordScreenState extends State<SetupPasswordScreen> {
+  final _controller = TextEditingController();
+  final _storage = StorageService();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Set App Password')),
+      body: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              'Set a password to protect your checklist data.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _controller,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'New Password',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () async {
+                if (_controller.text.isNotEmpty) {
+                  await _storage.setPassword(_controller.text);
+                  widget.onComplete();
+                }
+              },
+              child: const Text('Save Password'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class LoginScreen extends StatefulWidget {
+  final VoidCallback onAuthenticated;
+  const LoginScreen({super.key, required this.onAuthenticated});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _controller = TextEditingController();
+  final _storage = StorageService();
+  String _error = '';
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Login')),
+      body: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.lock, size: 64, color: Colors.blueGrey),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _controller,
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: 'Enter Password',
+                errorText: _error.isEmpty ? null : _error,
+                border: const OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () async {
+                final isValid = await _storage.verifyPassword(_controller.text);
+                if (isValid) {
+                  widget.onAuthenticated();
+                } else {
+                  setState(() {
+                    _error = 'Incorrect password';
+                  });
+                }
+              },
+              child: const Text('Login'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
