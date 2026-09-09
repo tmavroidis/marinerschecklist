@@ -181,6 +181,28 @@ class _LoginScreenState extends State<LoginScreen> {
               },
               child: const Text('Login'),
             ),
+            TextButton(
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Forgot Password?'),
+                    content: const Text(
+                      'This application uses local storage. If you have forgotten your password, '
+                      'please contact your administrator or reinstall the app to reset it. '
+                      'Note: Reinstalling will clear all your local data.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('OK'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              child: const Text('Forgot Password?'),
+            ),
           ],
         ),
       ),
