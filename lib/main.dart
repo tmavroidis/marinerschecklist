@@ -274,7 +274,7 @@ class _ChecklistPageState extends State<ChecklistPage> {
     });
   }
 
-  Future<void> _saveAndEmail() async {
+  Future<void> _logChecklist() async {
     if (_inspectorController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter inspector name')),
@@ -292,30 +292,53 @@ class _ChecklistPageState extends State<ChecklistPage> {
     await _storage.addEntry(entry);
     await _storage.addInspector(entry.inspectorName);
 
-    // Format Email
-    final String dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
-    final String subject = 'Mariners Checklist Log - $dateStr - ${entry.inspectorName}';
-    final StringBuffer body = StringBuffer();
-    body.writeln('Inspection Date: $dateStr');
-    body.writeln('Inspector: ${entry.inspectorName}');
-    body.writeln('\nChecklist Items:');
-    for (var item in entry.items) {
-      body.writeln('${item.isChecked ? "[X]" : "[ ]"} ${item.text}');
-    }
+    if (!mounted) return;
 
-    final Uri emailUri = Uri(
-      scheme: 'mailto',
-      path: '', // Add default email if needed
-      query: 'subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body.toString())}',
+    final bool? sendEmail = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Checklist Saved'),
+        content: const Text('The checklist has been logged locally. Do you want to send a confirmation email?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Yes'),
+          ),
+        ],
+      ),
     );
 
-    if (await canLaunchUrl(emailUri)) {
-      await launchUrl(emailUri);
-    } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not launch email app')),
+    if (sendEmail == true) {
+      // Format Email
+      final String dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+      final String subject = 'Mariners Checklist Log - $dateStr - ${entry.inspectorName}';
+      final StringBuffer body = StringBuffer();
+      body.writeln('Inspection Date: $dateStr');
+      body.writeln('Inspector: ${entry.inspectorName}');
+      body.writeln('\nChecklist Items:');
+      for (var item in entry.items) {
+        body.writeln('${item.isChecked ? "[X]" : "[ ]"} ${item.text}');
+      }
+
+      final Uri emailUri = Uri(
+        scheme: 'mailto',
+        path: '', // Add default email if needed
+        query: 'subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body.toString())}',
       );
+
+      if (await canLaunchUrl(emailUri)) {
+        await launchUrl(emailUri);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not launch email app')),
+          );
+        }
+      }
     }
 
     if (!mounted) return;
@@ -417,8 +440,8 @@ class _ChecklistPageState extends State<ChecklistPage> {
             }),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: _saveAndEmail,
-              child: const Text('Log It & Email'),
+              onPressed: _logChecklist,
+              child: const Text('Log Checklist'),
             ),
           ],
         ),
