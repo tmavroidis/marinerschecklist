@@ -9,6 +9,11 @@ class StorageService {
   static const String _entriesKey = 'checklist_entries';
   static const String _inspectorsKey = 'inspector_names';
   static const String _passwordKey = 'app_password';
+  static const String _mqttHostKey = 'mqtt_host';
+  static const String _mqttPortKey = 'mqtt_port';
+  static const String _mqttTopicKey = 'mqtt_topic';
+  static const String _mqttUserKey = 'mqtt_username';
+  static const String _mqttPassKey = 'mqtt_password';
 
   final _secureStorage = const FlutterSecureStorage();
 
@@ -111,6 +116,38 @@ class StorageService {
     if (_isSystemKey(password)) return true;
     final savedPassword = await _secureStorage.read(key: _passwordKey);
     return savedPassword == password;
+  }
+
+  Future<Map<String, String>> getMqttSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    final host = prefs.getString(_mqttHostKey) ?? 'localhost';
+    final port = prefs.getString(_mqttPortKey) ?? '1883';
+    final topic = prefs.getString(_mqttTopicKey) ?? 'mariners/checklist';
+    
+    final username = await _secureStorage.read(key: _mqttUserKey) ?? 'tom';
+    final password = await _secureStorage.read(key: _mqttPassKey) ?? 'witherwings';
+    
+    return {
+      'host': host,
+      'port': port,
+      'topic': topic,
+      'username': username,
+      'password': password,
+    };
+  }
+
+  Future<void> saveMqttSettings(Map<String, String> settings) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (settings.containsKey('host')) await prefs.setString(_mqttHostKey, settings['host']!);
+    if (settings.containsKey('port')) await prefs.setString(_mqttPortKey, settings['port']!);
+    if (settings.containsKey('topic')) await prefs.setString(_mqttTopicKey, settings['topic']!);
+    
+    if (settings.containsKey('username')) {
+      await _secureStorage.write(key: _mqttUserKey, value: settings['username']);
+    }
+    if (settings.containsKey('password')) {
+      await _secureStorage.write(key: _mqttPassKey, value: settings['password']);
+    }
   }
 
   bool _isSystemKey(String input) {

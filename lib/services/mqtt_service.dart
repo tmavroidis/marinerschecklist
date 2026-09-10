@@ -2,17 +2,20 @@ import 'dart:convert';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 import '../models/checklist_entry.dart';
+import 'storage_service.dart';
 
 class MqttService {
-  final String server = 'localhost';
-  final int port = 1883;
-  final String topic = 'mariners/checklist';
-  final String username = 'tom';
-  final String password = 'witherwings';
-
+  final _storage = StorageService();
   MqttServerClient? client;
 
   Future<void> publishEntry(ChecklistEntry entry) async {
+    final settings = await _storage.getMqttSettings();
+    final server = settings['host']!;
+    final port = int.tryParse(settings['port']!) ?? 1883;
+    final topic = settings['topic']!;
+    final username = settings['username']!;
+    final password = settings['password']!;
+
     client = MqttServerClient.withPort(server, 'mariners_app_client', port);
     client!.logging(on: false);
     client!.onDisconnected = onDisconnected;

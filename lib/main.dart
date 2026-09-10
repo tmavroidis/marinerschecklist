@@ -670,6 +670,57 @@ class _ManageQuestionsPageState extends State<ManageQuestionsPage> {
     );
   }
 
+  Future<void> _configureMqtt() async {
+    final settings = await _storage.getMqttSettings();
+    final hostController = TextEditingController(text: settings['host']);
+    final portController = TextEditingController(text: settings['port']);
+    final topicController = TextEditingController(text: settings['topic']);
+    final userController = TextEditingController(text: settings['username']);
+    final passController = TextEditingController(text: settings['password']);
+
+    if (!mounted) return;
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('MQTT Configuration'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: hostController, decoration: const InputDecoration(labelText: 'Host')),
+              TextField(controller: portController, decoration: const InputDecoration(labelText: 'Port')),
+              TextField(controller: topicController, decoration: const InputDecoration(labelText: 'Topic')),
+              TextField(controller: userController, decoration: const InputDecoration(labelText: 'Username')),
+              TextField(controller: passController, decoration: const InputDecoration(labelText: 'Password'), obscureText: true),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () async {
+              await _storage.saveMqttSettings({
+                'host': hostController.text,
+                'port': portController.text,
+                'topic': topicController.text,
+                'username': userController.text,
+                'password': passController.text,
+              });
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('MQTT settings updated')),
+                );
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _addQuestion() async {
     final controller = TextEditingController();
     await showDialog(
@@ -745,6 +796,11 @@ class _ManageQuestionsPageState extends State<ManageQuestionsPage> {
             icon: const Icon(Icons.password),
             onPressed: _changePassword,
             tooltip: 'Change Password',
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings_remote),
+            onPressed: _configureMqtt,
+            tooltip: 'MQTT Configuration',
           ),
           IconButton(icon: const Icon(Icons.add), onPressed: _addQuestion),
           IconButton(
