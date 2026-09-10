@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'models/checklist_item.dart';
 import 'models/checklist_entry.dart';
 import 'services/storage_service.dart';
+import 'services/mqtt_service.dart';
 
 void main() {
   runApp(const MarinersChecklistApp());
@@ -252,6 +253,7 @@ class ChecklistPage extends StatefulWidget {
 
 class _ChecklistPageState extends State<ChecklistPage> {
   final _storage = StorageService();
+  final _mqttService = MqttService();
   final _inspectorController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
   List<ChecklistItem> _items = [];
@@ -291,6 +293,11 @@ class _ChecklistPageState extends State<ChecklistPage> {
 
     await _storage.addEntry(entry);
     await _storage.addInspector(entry.inspectorName);
+
+    // Publish to MQTT
+    _mqttService.publishEntry(entry).catchError((e) {
+      print('Failed to publish to MQTT: $e');
+    });
 
     if (!mounted) return;
 
