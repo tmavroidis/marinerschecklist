@@ -621,6 +621,7 @@ class ManageQuestionsPage extends StatefulWidget {
 
 class _ManageQuestionsPageState extends State<ManageQuestionsPage> {
   final _storage = StorageService();
+  final _mqttService = MqttService();
   List<ChecklistItem> _questions = [];
   bool _isLoading = true;
 
@@ -677,46 +678,79 @@ class _ManageQuestionsPageState extends State<ManageQuestionsPage> {
     final topicController = TextEditingController(text: settings['topic']);
     final userController = TextEditingController(text: settings['username']);
     final passController = TextEditingController(text: settings['password']);
+    bool mqttEnabled = settings['enabled'] == 'true';
 
     if (!mounted) return;
 
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('MQTT Configuration'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: hostController, decoration: const InputDecoration(labelText: 'Host')),
-              TextField(controller: portController, decoration: const InputDecoration(labelText: 'Port')),
-              TextField(controller: topicController, decoration: const InputDecoration(labelText: 'Topic')),
-              TextField(controller: userController, decoration: const InputDecoration(labelText: 'Username')),
-              TextField(controller: passController, decoration: const InputDecoration(labelText: 'Password'), obscureText: true),
-            ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('MQTT Configuration'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SwitchListTile(
+                  title: const Text('Enable MQTT Logging'),
+                  value: mqttEnabled,
+                  onChanged: (val) => setDialogState(() => mqttEnabled = val),
+                ),
+                TextField(controller: hostController, decoration: const InputDecoration(labelText: 'Host')),
+                TextField(controller: portController, decoration: const InputDecoration(labelText: 'Port')),
+                TextField(controller: topicController, decoration: const InputDecoration(labelText: 'Topic')),
+                TextField(controller: userController, decoration: const InputDecoration(labelText: 'Username')),
+                TextField(
+                  controller: passController,
+                  decoration: const InputDecoration(labelText: 'Password'),
+                  obscureText: true,
+                ),
+                const SizedBox(height: 10),
+                ElevatedButton(
+                  onPressed: () async {
+                    final success = await _mqttService.testConnection(
+                      host: hostController.text,
+                      port: portController.text,
+                      username: userController.text,
+                      password: passController.text,
+                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(success ? 'MQTT Connection Successful!' : 'MQTT Connection Failed'),
+                          backgroundColor: success ? Colors.green : Colors.red,
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text('Test Connection'),
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () async {
+                await _storage.saveMqttSettings({
+                  'host': hostController.text,
+                  'port': portController.text,
+                  'topic': topicController.text,
+                  'username': userController.text,
+                  'password': passController.text,
+                  'enabled': mqttEnabled.toString(),
+                });
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('MQTT settings updated')),
+                  );
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () async {
-              await _storage.saveMqttSettings({
-                'host': hostController.text,
-                'port': portController.text,
-                'topic': topicController.text,
-                'username': userController.text,
-                'password': passController.text,
-              });
-              if (context.mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('MQTT settings updated')),
-                );
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
   }

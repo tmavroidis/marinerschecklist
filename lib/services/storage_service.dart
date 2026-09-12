@@ -14,6 +14,7 @@ class StorageService {
   static const String _mqttTopicKey = 'mqtt_topic';
   static const String _mqttUserKey = 'mqtt_username';
   static const String _mqttPassKey = 'mqtt_password';
+  static const String _mqttEnabledKey = 'mqtt_enabled';
 
   final _secureStorage = const FlutterSecureStorage();
 
@@ -123,6 +124,7 @@ class StorageService {
     final host = prefs.getString(_mqttHostKey) ?? 'localhost';
     final port = prefs.getString(_mqttPortKey) ?? '1883';
     final topic = prefs.getString(_mqttTopicKey) ?? 'mariners/checklist';
+    final enabled = prefs.getBool(_mqttEnabledKey) ?? true;
     
     final username = await _secureStorage.read(key: _mqttUserKey) ?? 'tom';
     final password = await _secureStorage.read(key: _mqttPassKey) ?? 'witherwings';
@@ -131,6 +133,7 @@ class StorageService {
       'host': host,
       'port': port,
       'topic': topic,
+      'enabled': enabled.toString(),
       'username': username,
       'password': password,
     };
@@ -141,6 +144,9 @@ class StorageService {
     if (settings.containsKey('host')) await prefs.setString(_mqttHostKey, settings['host']!);
     if (settings.containsKey('port')) await prefs.setString(_mqttPortKey, settings['port']!);
     if (settings.containsKey('topic')) await prefs.setString(_mqttTopicKey, settings['topic']!);
+    if (settings.containsKey('enabled')) {
+      await prefs.setBool(_mqttEnabledKey, settings['enabled'] == 'true');
+    }
     
     if (settings.containsKey('username')) {
       await _secureStorage.write(key: _mqttUserKey, value: settings['username']);

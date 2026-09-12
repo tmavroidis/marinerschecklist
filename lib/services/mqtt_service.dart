@@ -10,6 +10,8 @@ class MqttService {
 
   Future<void> publishEntry(ChecklistEntry entry) async {
     final settings = await _storage.getMqttSettings();
+    if (settings['enabled'] != 'true') return;
+
     final server = settings['host']!;
     final port = int.tryParse(settings['port']!) ?? 1883;
     final topic = settings['topic']!;
@@ -47,6 +49,35 @@ class MqttService {
       print('MQTT client connection failed - status is ${client!.connectionStatus}');
       client!.disconnect();
     }
+  }
+
+  Future<bool> testConnection({
+    required String host,
+    required String port,
+    required String username,
+    required String password,
+  }) async {
+    final intPort = int.tryParse(port) ?? 1883;
+    final testClient = MqttServerClient.withPort(host, 'mariners_test_client', intPort);
+    testClient.logging(on: false);
+
+    final connMessage = MqttConnectMessage()
+        .withClientIdentifier('mariners_test_client')
+        .authenticateAs(username, password)
+        .startClean();
+    testClient.connectionMessage = connMessage;
+
+    try {
+      await testClient.connect().timeout(const Duration(seconds: 5));
+      if (testClient.connectionStatus!.state == MqttConnectionState.connected) {
+        testClient.disconnect();
+        return true;
+      }
+    } catch (e) {
+      print('MQTT Test connection failed: $e');
+    }
+    testClient.disconnect();
+    return false;
   }
 
   void onDisconnected() {
